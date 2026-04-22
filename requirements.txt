@@ -1,0 +1,8 @@
+paho-mqtt
+PyYAML
+streamlit
+pandas
+plotly
+influxdb-client
+pytest
+python-dotenv

@@ -1,0 +1,42 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Environment/config secrets
+.env
+src/device/esp32/secrets.h
+
+# Logs
+logs/
+*.log
+
+# OS / editor
+.DS_Store
+.vscode/
+.idea/
+
+# Streamlit/cache
+.streamlit/
+
+# Local data exports / temp files
+data/exports/
+data/tmp/
+
+# Local database files
+*.db
+*.sqlite3
+
+# Coverage / build artifacts
+.coverage
+htmlcov/
+dist/
+build/
+*.egg-info/

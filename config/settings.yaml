@@ -1,0 +1,49 @@
+project:
+  name: "iot-environment-intelligence"
+  description: "IoT pipeline for environmental sensing, event detection, and live visualization"
+
+mqtt:
+  broker: "localhost"
+  port: 1883
+  keepalive: 60
+  topic_raw: "iot/environment/raw"
+  topic_processed: "iot/environment/processed"
+  client_id: "environment_consumer"
+
+device_defaults:
+  device_id: "esp32_room_1"
+  location: "bedroom"
+
+storage:
+  influx_url: "http://localhost:8086"
+  org: "iot-project"
+  bucket: "environment_data"
+  measurement: "environment_readings"
+
+thresholds:
+  high_temp_f: 82
+  low_temp_f: 60
+  high_humidity: 70
+  low_humidity: 20
+  high_light_lux: 700
+  sudden_temp_drop_f: 4
+  sunlight_temp_rise_f: 2
+  duplicate_window_seconds: 5
+  dropout_seconds: 20
+
+validation:
+  allowed_temp_range_f: [20, 120]
+  allowed_humidity_range: [0, 100]
+  allowed_pressure_range_hpa: [800, 1200]
+  allowed_light_range_lux: [0, 100000]
+
+processing:
+  timezone: "UTC"
+  required_fields:
+    - timestamp
+    - device_id
+    - location
+    - temperature_f
+    - humidity
+    - pressure_hpa
+    - light_lux
