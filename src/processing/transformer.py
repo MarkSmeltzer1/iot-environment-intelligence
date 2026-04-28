@@ -40,7 +40,7 @@ def process_message(
     }
 
     # Step 3: If valid, run event detection
-    if is_valid and previous is not None:
+    if is_valid:
         event_result = detect_event(message, previous, config)
         result["event_label"] = event_result["event_label"]
         result["anomaly_flag"] = event_result["anomaly_flag"]

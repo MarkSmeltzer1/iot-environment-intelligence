@@ -30,7 +30,10 @@ class MQTTConsumer:
     def __init__(self, config: Dict[str, Any]):
         self.config = config
         self.mqtt_config = config["mqtt"]
-        self.client = mqtt.Client(client_id=self.mqtt_config["client_id"])
+        self.client = mqtt.Client(
+            callback_api_version=mqtt.CallbackAPIVersion.VERSION2,
+            client_id=self.mqtt_config["client_id"],
+        )
         self.client.on_connect = self._on_connect
         self.client.on_message = self._on_message
         self.client.on_disconnect = self._on_disconnect
@@ -46,9 +49,17 @@ class MQTTConsumer:
         # Callback for processed messages (can be used by storage layer)
         self.message_callback = None
 
-    def _on_connect(self, client, userdata, flags, rc):
+    @staticmethod
+    def _is_success_reason_code(reason_code) -> bool:
+        """Return True for successful MQTT reason codes across paho versions."""
+        try:
+            return int(reason_code) == 0
+        except (TypeError, ValueError):
+            return str(reason_code) == "Success"
+
+    def _on_connect(self, client, userdata, flags, reason_code, properties=None):
         """Callback when connected to MQTT broker."""
-        if rc == 0:
+        if self._is_success_reason_code(reason_code):
             logger.info(
                 f"Connected to MQTT broker at {self.mqtt_config['broker']}:{self.mqtt_config['port']}")
             # Subscribe to raw sensor topic
@@ -57,11 +68,13 @@ class MQTTConsumer:
             logger.info(f"Subscribed to topic: {topic}")
         else:
             logger.error(
-                f"Failed to connect to MQTT broker, return code: {rc}")
+                f"Failed to connect to MQTT broker, return code: {reason_code}")
 
-    def _on_disconnect(self, client, userdata, rc):
+    def _on_disconnect(self, client, userdata, disconnect_flags=None, reason_code=None, properties=None):
         """Callback when disconnected from MQTT broker."""
-        logger.warning(f"Disconnected from MQTT broker, return code: {rc}")
+        if reason_code is None:
+            reason_code = disconnect_flags
+        logger.warning(f"Disconnected from MQTT broker, return code: {reason_code}")
 
     def _on_message(self, client, userdata, msg):
         """

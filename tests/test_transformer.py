@@ -75,7 +75,7 @@ def test_process_message_out_of_range():
 
 
 def test_process_message_no_previous():
-    """Test processing a valid message without previous data."""
+    """Test processing a valid first message without previous data."""
     config = load_config()
 
     message = {
@@ -91,5 +91,5 @@ def test_process_message_no_previous():
     result = process_message(message, config, None)
 
     assert result["valid"] is True
-    assert result["event_label"] == "unknown"  # No previous = unknown
+    assert result["event_label"] == "normal"
     assert result["anomaly_flag"] is False
