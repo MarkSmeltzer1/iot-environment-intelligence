@@ -112,6 +112,12 @@ Test InfluxDB connectivity:
 python scripts/init_storage.py
 ```
 
+Show total stored records:
+
+```bash
+python scripts/show_record_count.py
+```
+
 Start the dashboard without Docker:
 
 ```bash

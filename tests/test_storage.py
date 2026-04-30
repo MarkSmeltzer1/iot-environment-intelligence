@@ -129,3 +129,37 @@ def test_queries_get_latest_reading(mock_influx_client):
     latest = queries.get_latest_reading()
 
     assert latest is None
+
+
+@patch('src.storage.queries.InfluxDBClient')
+def test_queries_get_sensor_trends_empty(mock_influx_client):
+    """Test get_sensor_trends returns an empty list for empty DB."""
+    config = load_config()
+    queries = InfluxDBQueries(config)
+
+    mock_result = MagicMock()
+    mock_result.empty = True
+
+    queries.query_api = Mock()
+    queries.query_api.query_data_frame = Mock(return_value=mock_result)
+
+    trends = queries.get_sensor_trends(hours=24)
+
+    assert trends == []
+
+
+@patch('src.storage.queries.InfluxDBClient')
+def test_queries_get_recent_anomalies_empty(mock_influx_client):
+    """Test get_recent_anomalies returns an empty list for empty DB."""
+    config = load_config()
+    queries = InfluxDBQueries(config)
+
+    mock_result = MagicMock()
+    mock_result.empty = True
+
+    queries.query_api = Mock()
+    queries.query_api.query_data_frame = Mock(return_value=mock_result)
+
+    anomalies = queries.get_recent_anomalies(hours=24)
+
+    assert anomalies == []

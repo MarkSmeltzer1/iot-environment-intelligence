@@ -68,5 +68,6 @@ The committed `.env.example` shows the expected variable names without requiring
 python scripts/run_consumer.py
 python scripts/publish_example.py examples/valid_reading.json
 python scripts/init_storage.py
+python scripts/show_record_count.py
 python scripts/run_dashboard.py
 ```

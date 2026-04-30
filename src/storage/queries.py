@@ -8,6 +8,7 @@ import os
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional
 
+import pandas as pd
 from dotenv import load_dotenv
 from influxdb_client import InfluxDBClient
 from influxdb_client.rest import ApiException
@@ -49,6 +50,18 @@ class InfluxDBQueries:
         start_time = end_time - timedelta(hours=hours)
         return start_time.strftime("%Y-%m-%dT%H:%M:%SZ"), end_time.strftime("%Y-%m-%dT%H:%M:%SZ")
 
+    def _query_data_frame(self, query: str) -> pd.DataFrame:
+        """Run a Flux query and normalize InfluxDB results to one DataFrame."""
+        result = self.query_api.query_data_frame(query)
+
+        if isinstance(result, list):
+            frames = [frame for frame in result if not frame.empty]
+            if not frames:
+                return pd.DataFrame()
+            return pd.concat(frames, ignore_index=True)
+
+        return result
+
     def get_recent_readings(
         self,
         device_id: Optional[str] = None,
@@ -82,7 +95,7 @@ class InfluxDBQueries:
         query += f'\n          |> limit(n: {limit})'
 
         try:
-            result = self.query_api.query_data_frame(query)
+            result = self._query_data_frame(query)
 
             if result.empty:
                 return []
@@ -129,7 +142,7 @@ class InfluxDBQueries:
         query += '\n          |> last()'
 
         try:
-            result = self.query_api.query_data_frame(query)
+            result = self._query_data_frame(query)
 
             if result.empty:
                 return None
@@ -179,7 +192,7 @@ class InfluxDBQueries:
         '''
 
         try:
-            result = self.query_api.query_data_frame(query)
+            result = self._query_data_frame(query)
 
             if result.empty:
                 return {}
@@ -228,7 +241,7 @@ class InfluxDBQueries:
         query += '\n          |> count()'
 
         try:
-            result = self.query_api.query_data_frame(query)
+            result = self._query_data_frame(query)
 
             if result.empty:
                 return 0
@@ -269,7 +282,7 @@ class InfluxDBQueries:
         query += '\n          |> aggregateWindow(every: 5m, fn: mean, createEmpty: false)'
 
         try:
-            result = self.query_api.query_data_frame(query)
+            result = self._query_data_frame(query)
 
             if result.empty:
                 return []
@@ -303,7 +316,7 @@ class InfluxDBQueries:
         '''
 
         try:
-            result = self.query_api.query_data_frame(query)
+            result = self._query_data_frame(query)
 
             if result.empty:
                 return 0
@@ -313,6 +326,104 @@ class InfluxDBQueries:
         except ApiException as e:
             logger.error(f"Query failed: {e}")
             return 0
+
+    def get_sensor_trends(
+        self,
+        device_id: Optional[str] = None,
+        hours: int = 24
+    ) -> List[Dict[str, Any]]:
+        """
+        Get temperature, humidity, pressure, and light trends.
+
+        Returns:
+            Long-form rows with timestamp, sensor, and value for charting.
+        """
+        start, end = self._get_time_range(hours)
+
+        query = f'''
+        from(bucket: "{self.bucket}")
+          |> range(start: {start})
+          |> filter(fn: (r) => r._measurement == "{self.measurement}")
+          |> filter(fn: (r) => r._field == "temperature_f" or r._field == "humidity" or r._field == "pressure_hpa" or r._field == "light_lux")
+        '''
+
+        if device_id:
+            query += f'\n          |> filter(fn: (r) => r.device_id == "{device_id}")'
+
+        query += '\n          |> aggregateWindow(every: 1m, fn: mean, createEmpty: false)'
+
+        try:
+            result = self._query_data_frame(query)
+
+            if result.empty:
+                return []
+
+            trends = []
+            for _, row in result.iterrows():
+                trends.append({
+                    "timestamp": str(row["_time"]),
+                    "sensor": row["_field"],
+                    "value": row["_value"],
+                    "device_id": row.get("device_id", "unknown"),
+                    "location": row.get("location", "unknown"),
+                })
+
+            return trends
+
+        except ApiException as e:
+            logger.error(f"Query failed: {e}")
+            return []
+
+    def get_recent_anomalies(
+        self,
+        hours: int = 24,
+        limit: int = 50,
+        device_id: Optional[str] = None
+    ) -> List[Dict[str, Any]]:
+        """
+        Get recent anomaly records for timeline/table views.
+
+        Returns:
+            List of anomaly records with timestamp, device, location, and value.
+        """
+        start, end = self._get_time_range(hours)
+
+        query = f'''
+        from(bucket: "{self.bucket}")
+          |> range(start: {start})
+          |> filter(fn: (r) => r._measurement == "{self.measurement}")
+          |> filter(fn: (r) => r._field == "anomaly_flag")
+          |> filter(fn: (r) => r._value == 1)
+        '''
+
+        if device_id:
+            query += f'\n          |> filter(fn: (r) => r.device_id == "{device_id}")'
+
+        query += f'''
+          |> sort(columns: ["_time"], desc: true)
+          |> limit(n: {limit})
+        '''
+
+        try:
+            result = self._query_data_frame(query)
+
+            if result.empty:
+                return []
+
+            anomalies = []
+            for _, row in result.iterrows():
+                anomalies.append({
+                    "timestamp": str(row["_time"]),
+                    "device_id": row.get("device_id", "unknown"),
+                    "location": row.get("location", "unknown"),
+                    "anomaly_flag": int(row["_value"]),
+                })
+
+            return anomalies
+
+        except ApiException as e:
+            logger.error(f"Query failed: {e}")
+            return []
 
     def close(self):
         """Close the InfluxDB client."""

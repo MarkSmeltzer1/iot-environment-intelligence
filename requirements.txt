@@ -1,6 +1,7 @@
 paho-mqtt
 PyYAML
 streamlit
+streamlit-autorefresh
 pandas
 plotly
 influxdb-client
