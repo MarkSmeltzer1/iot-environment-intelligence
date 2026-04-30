@@ -35,6 +35,12 @@ Start the Streamlit dashboard:
 docker compose up -d app
 ```
 
+Start the live MQTT web monitor:
+
+```bash
+docker compose up -d monitor
+```
+
 Publish test messages through the Docker network:
 
 ```bash
@@ -52,6 +58,7 @@ docker compose exec -T app python scripts/show_record_count.py
 Open:
 
 ```text
+MQTT monitor: http://localhost:8600
 Streamlit: http://localhost:8501
 InfluxDB:  http://localhost:8086
 ```
@@ -84,4 +91,5 @@ python scripts/publish_example.py examples/valid_reading.json --use-current-time
 python scripts/init_storage.py
 python scripts/show_record_count.py
 python scripts/run_dashboard.py
+python scripts/run_mqtt_monitor.py
 ```

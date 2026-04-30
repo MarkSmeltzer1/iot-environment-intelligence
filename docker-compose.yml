@@ -40,6 +40,22 @@ services:
       - ./logs:/app/logs
     command: python scripts/run_consumer.py
 
+  monitor:
+    build: .
+    container_name: iot-environment-monitor
+    depends_on:
+      - mqtt
+    environment:
+      MQTT_BROKER: mqtt
+      MQTT_PORT: 1883
+      MONITOR_HOST: 0.0.0.0
+      MONITOR_PORT: 8600
+    ports:
+      - "8600:8600"
+    volumes:
+      - ./logs:/app/logs
+    command: python scripts/run_mqtt_monitor.py
+
   app:
     build: .
     container_name: iot-environment-app

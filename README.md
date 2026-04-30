@@ -79,6 +79,12 @@ Start the Streamlit dashboard:
 docker compose up -d app
 ```
 
+Start the live MQTT web monitor:
+
+```bash
+docker compose up -d monitor
+```
+
 Publish test messages through the Docker network:
 
 ```bash
@@ -96,6 +102,7 @@ docker compose exec -T app python scripts/show_record_count.py
 Open:
 
 ```text
+MQTT monitor: http://localhost:8600
 Streamlit: http://localhost:8501
 InfluxDB:  http://localhost:8086
 ```
@@ -136,6 +143,12 @@ Start the dashboard without Docker:
 
 ```bash
 python scripts/run_dashboard.py
+```
+
+Start the live MQTT web monitor without Docker:
+
+```bash
+python scripts/run_mqtt_monitor.py
 ```
 
 Runtime logs are written to `logs/` and printed to the terminal. Log files are ignored by Git, but the folder is kept so the project structure is visible.

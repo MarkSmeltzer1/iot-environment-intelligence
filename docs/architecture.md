@@ -27,6 +27,8 @@ Streamlit Dashboard
 
 `src/ingestion/` receives MQTT messages. The consumer parses JSON, tracks message counts, remembers the previous reading, and passes processed results to a callback.
 
+`src/monitor/` subscribes to the raw MQTT topic and serves a local browser page for watching live device payloads.
+
 `src/processing/` validates sensor messages and assigns event labels. The transformer combines validation and rule-based event detection into one processed record.
 
 `src/storage/` writes processed records to InfluxDB and provides reusable query methods for dashboard views.
