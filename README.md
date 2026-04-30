@@ -82,8 +82,8 @@ docker compose up -d app
 Publish test messages through the Docker network:
 
 ```bash
-docker compose exec -T consumer python scripts/publish_example.py examples/valid_reading.json
-docker compose exec -T consumer python scripts/publish_example.py examples/high_temp_reading.json
+docker compose exec -T consumer python scripts/publish_example.py examples/valid_reading.json --use-current-time --repeat 5
+docker compose exec -T consumer python scripts/publish_example.py examples/high_temp_reading.json --use-current-time
 docker compose exec -T consumer python scripts/publish_example.py examples/invalid_reading.json
 ```
 
@@ -117,7 +117,7 @@ python scripts/run_consumer.py
 Publish one example MQTT message:
 
 ```bash
-python scripts/publish_example.py examples/valid_reading.json
+python scripts/publish_example.py examples/valid_reading.json --use-current-time
 ```
 
 Test InfluxDB connectivity:

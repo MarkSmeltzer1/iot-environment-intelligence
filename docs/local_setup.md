@@ -38,8 +38,8 @@ docker compose up -d app
 Publish test messages through the Docker network:
 
 ```bash
-docker compose exec -T consumer python scripts/publish_example.py examples/valid_reading.json
-docker compose exec -T consumer python scripts/publish_example.py examples/high_temp_reading.json
+docker compose exec -T consumer python scripts/publish_example.py examples/valid_reading.json --use-current-time --repeat 5
+docker compose exec -T consumer python scripts/publish_example.py examples/high_temp_reading.json --use-current-time
 docker compose exec -T consumer python scripts/publish_example.py examples/invalid_reading.json
 ```
 
@@ -80,7 +80,7 @@ The committed `.env.example` shows the expected variable names without requiring
 
 ```bash
 python scripts/run_consumer.py
-python scripts/publish_example.py examples/valid_reading.json
+python scripts/publish_example.py examples/valid_reading.json --use-current-time
 python scripts/init_storage.py
 python scripts/show_record_count.py
 python scripts/run_dashboard.py
