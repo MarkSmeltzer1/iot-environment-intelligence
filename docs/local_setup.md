@@ -35,6 +35,20 @@ Start the Streamlit dashboard:
 docker compose up -d app
 ```
 
+Publish test messages through the Docker network:
+
+```bash
+docker compose exec -T consumer python scripts/publish_example.py examples/valid_reading.json
+docker compose exec -T consumer python scripts/publish_example.py examples/high_temp_reading.json
+docker compose exec -T consumer python scripts/publish_example.py examples/invalid_reading.json
+```
+
+Show total stored records:
+
+```bash
+docker compose exec -T app python scripts/show_record_count.py
+```
+
 Open:
 
 ```text

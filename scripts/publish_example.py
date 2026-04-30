@@ -31,8 +31,10 @@ def publish_example(example_path: Path) -> int:
         client_id="environment_example_publisher",
     )
     client.connect(broker, port, mqtt_config["keepalive"])
+    client.loop_start()
     result = client.publish(topic, encoded_payload, qos=1)
     result.wait_for_publish()
+    client.loop_stop()
     client.disconnect()
 
     if result.rc != mqtt.MQTT_ERR_SUCCESS:

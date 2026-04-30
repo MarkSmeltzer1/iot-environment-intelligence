@@ -5,18 +5,21 @@ Provides reusable query functions for retrieving environmental data
 from InfluxDB for dashboard visualization and analysis.
 """
 import os
+import warnings
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional
 
 import pandas as pd
 from dotenv import load_dotenv
 from influxdb_client import InfluxDBClient
+from influxdb_client.client.warnings import MissingPivotFunction
 from influxdb_client.rest import ApiException
 
 from src.utils.config_loader import load_config
 from src.utils.logger import setup_logger
 
 logger = setup_logger("storage_queries")
+warnings.simplefilter("ignore", MissingPivotFunction)
 
 
 class InfluxDBQueries:
