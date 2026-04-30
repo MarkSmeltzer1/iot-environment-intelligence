@@ -11,16 +11,22 @@ pytest
 
 ## Docker Runtime
 
-Start InfluxDB:
+Start the local MQTT broker and InfluxDB:
 
 ```bash
-docker compose up -d influxdb
+docker compose up -d mqtt influxdb
 ```
 
 Verify the app can connect to InfluxDB:
 
 ```bash
 docker compose run --rm app python scripts/init_storage.py
+```
+
+Start the MQTT consumer:
+
+```bash
+docker compose up -d consumer
 ```
 
 Start the Streamlit dashboard:
@@ -60,6 +66,7 @@ The committed `.env.example` shows the expected variable names without requiring
 
 ```bash
 python scripts/run_consumer.py
+python scripts/publish_example.py examples/valid_reading.json
 python scripts/init_storage.py
 python scripts/run_dashboard.py
 ```

@@ -6,6 +6,7 @@ the pipeline (validation -> transformation -> event detection), and
 optionally writes to InfluxDB.
 """
 import json
+import os
 from typing import Any, Dict, Optional
 
 import paho.mqtt.client as mqtt
@@ -24,7 +25,13 @@ class MQTTConsumer:
 
     def __init__(self, config: Dict[str, Any]):
         self.config = config
-        self.mqtt_config = config["mqtt"]
+        self.mqtt_config = config["mqtt"].copy()
+        self.mqtt_config["broker"] = os.getenv(
+            "MQTT_BROKER", self.mqtt_config["broker"]
+        )
+        self.mqtt_config["port"] = int(
+            os.getenv("MQTT_PORT", self.mqtt_config["port"])
+        )
         self.client = mqtt.Client(
             callback_api_version=mqtt.CallbackAPIVersion.VERSION2,
             client_id=self.mqtt_config["client_id"],
@@ -174,12 +181,17 @@ class MQTTConsumer:
 
 def main():
     """Main entry point for running the MQTT consumer."""
+    from src.storage.influx_writer import InfluxDBWriter
+
     # Load configuration
     config = load_config()
     logger.info("Configuration loaded")
 
     # Create consumer
     consumer = MQTTConsumer(config)
+    writer = InfluxDBWriter(config)
+    consumer.set_message_callback(writer.write_callback)
+    logger.info("InfluxDB writer callback attached")
 
     # Connect and start
     try:
@@ -188,8 +200,10 @@ def main():
     except KeyboardInterrupt:
         logger.info("Interrupted by user")
         consumer.stop()
+        writer.close()
     except Exception as e:
         logger.error(f"Consumer error: {e}")
+        writer.close()
         raise
 
 

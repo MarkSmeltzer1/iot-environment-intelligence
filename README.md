@@ -34,6 +34,7 @@ Streamlit Dashboard
 
 ```text
 config/       Runtime configuration and thresholds
+docker/       Local service configuration for Docker Compose
 docs/         Architecture, schema, setup, and hardware notes
 examples/     Sample MQTT payloads for manual testing and demos
 firmware/     ESP32 firmware and device-specific templates
@@ -54,16 +55,22 @@ pytest
 
 ## Local InfluxDB + Dashboard
 
-Start InfluxDB:
+Start the local MQTT broker and InfluxDB:
 
 ```bash
-docker compose up -d influxdb
+docker compose up -d mqtt influxdb
 ```
 
 Verify the app can connect:
 
 ```bash
 docker compose run --rm app python scripts/init_storage.py
+```
+
+Start the MQTT consumer:
+
+```bash
+docker compose up -d consumer
 ```
 
 Start the Streamlit dashboard:
@@ -91,6 +98,12 @@ Start the MQTT consumer:
 
 ```bash
 python scripts/run_consumer.py
+```
+
+Publish one example MQTT message:
+
+```bash
+python scripts/publish_example.py examples/valid_reading.json
 ```
 
 Test InfluxDB connectivity:

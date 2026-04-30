@@ -1,4 +1,12 @@
 services:
+  mqtt:
+    image: eclipse-mosquitto:2
+    container_name: iot-environment-mqtt
+    ports:
+      - "1883:1883"
+    volumes:
+      - ./docker/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+
   influxdb:
     image: influxdb:2.7
     container_name: iot-environment-influxdb
@@ -15,6 +23,23 @@ services:
       - influxdb2-data:/var/lib/influxdb2
       - influxdb2-config:/etc/influxdb2
 
+  consumer:
+    build: .
+    container_name: iot-environment-consumer
+    depends_on:
+      - mqtt
+      - influxdb
+    environment:
+      MQTT_BROKER: mqtt
+      MQTT_PORT: 1883
+      INFLUXDB_URL: http://influxdb:8086
+      INFLUXDB_ORG: ${INFLUXDB_ORG:-iot-project}
+      INFLUXDB_BUCKET: ${INFLUXDB_BUCKET:-environment_data}
+      INFLUXDB_TOKEN: ${INFLUXDB_TOKEN:-local-dev-token}
+    volumes:
+      - ./logs:/app/logs
+    command: python scripts/run_consumer.py
+
   app:
     build: .
     container_name: iot-environment-app
@@ -27,6 +52,8 @@ services:
       INFLUXDB_TOKEN: ${INFLUXDB_TOKEN:-local-dev-token}
     ports:
       - "8501:8501"
+    volumes:
+      - ./logs:/app/logs
     command: streamlit run src/dashboard/app.py --server.address 0.0.0.0 --server.port 8501
 
 volumes:

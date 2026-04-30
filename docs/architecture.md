@@ -23,6 +23,8 @@ Streamlit Dashboard
 
 `firmware/esp32/` contains device code and secrets templates for the ESP32 runtime.
 
+`docker/` contains local service configuration, including the Mosquitto MQTT broker used during development.
+
 `src/ingestion/` receives MQTT messages. The consumer parses JSON, tracks message counts, remembers the previous reading, and passes processed results to a callback.
 
 `src/processing/` validates sensor messages and assigns event labels. The transformer combines validation and rule-based event detection into one processed record.
