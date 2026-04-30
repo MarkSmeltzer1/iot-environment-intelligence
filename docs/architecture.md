@@ -31,6 +31,8 @@ Streamlit Dashboard
 
 `src/processing/` validates sensor messages and assigns event labels. The transformer combines validation and rule-based event detection into one processed record.
 
+`src/simulation/` publishes realistic pre-device MQTT data for pipeline testing. It is a development aid only; the final capstone device layer is the ESP32.
+
 `src/storage/` writes processed records to InfluxDB and provides reusable query methods for dashboard views.
 
 `src/dashboard/` contains the Streamlit app. It reads from the storage query layer instead of talking directly to raw processing code.

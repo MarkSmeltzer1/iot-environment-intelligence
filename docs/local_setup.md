@@ -49,6 +49,12 @@ docker compose exec -T consumer python scripts/publish_example.py examples/high_
 docker compose exec -T consumer python scripts/publish_example.py examples/invalid_reading.json
 ```
 
+Publish a realistic simulated stream before the ESP32 is connected:
+
+```bash
+docker compose exec -T consumer python scripts/run_simulator.py --count 60 --interval-seconds 1 --include-failures
+```
+
 Show total stored records:
 
 ```bash
@@ -88,6 +94,7 @@ The committed `.env.example` shows the expected variable names without requiring
 ```bash
 python scripts/run_consumer.py
 python scripts/publish_example.py examples/valid_reading.json --use-current-time
+python scripts/run_simulator.py --count 60 --interval-seconds 1 --include-failures
 python scripts/init_storage.py
 python scripts/show_record_count.py
 python scripts/run_dashboard.py

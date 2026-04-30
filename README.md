@@ -93,6 +93,12 @@ docker compose exec -T consumer python scripts/publish_example.py examples/high_
 docker compose exec -T consumer python scripts/publish_example.py examples/invalid_reading.json
 ```
 
+Publish a realistic simulated stream before the ESP32 is connected:
+
+```bash
+docker compose exec -T consumer python scripts/run_simulator.py --count 60 --interval-seconds 1 --include-failures
+```
+
 Show total stored records:
 
 ```bash
@@ -139,6 +145,12 @@ Show total stored records:
 python scripts/show_record_count.py
 ```
 
+Publish a local simulated stream:
+
+```bash
+python scripts/run_simulator.py --count 60 --interval-seconds 1 --include-failures
+```
+
 Start the dashboard without Docker:
 
 ```bash
@@ -159,6 +171,7 @@ Runtime logs are written to `logs/` and printed to the terminal. Log files are i
 - [Data schema](docs/data_schema.md)
 - [Local setup](docs/local_setup.md)
 - [Hardware plan](docs/hardware_plan.md)
+- [Demo plan](docs/demo_plan.md)
 
 ## Current Status
 
@@ -178,7 +191,7 @@ Completed:
 Current test status:
 
 ```text
-25 passed
+31 passed
 ```
 
 Next:

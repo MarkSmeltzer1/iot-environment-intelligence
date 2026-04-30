@@ -75,7 +75,7 @@ class InfluxDBWriter:
         point.field("temperature_f", raw.get("temperature_f", 0))
         point.field("humidity", raw.get("humidity", 0))
         point.field("pressure_hpa", raw.get("pressure_hpa", 0))
-        point.field("light_lux", raw.get("light_lux", 0))
+        point.field("light_lux", int(round(raw.get("light_lux", 0))))
 
         # Add event data as fields
         point.field("event_label", processed_result.get(
