@@ -12,10 +12,11 @@ env/
 
 # Environment/config secrets
 .env
-src/device/esp32/secrets.h
+firmware/esp32/secrets.h
 
 # Logs
-logs/
+logs/*
+!logs/.gitkeep
 *.log
 
 # OS / editor

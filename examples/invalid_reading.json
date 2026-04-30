@@ -1,0 +1,8 @@
+{
+  "timestamp": "not-a-timestamp",
+  "device_id": "esp32_room_1",
+  "location": "bedroom",
+  "temperature_f": 130.0,
+  "humidity": 45.0,
+  "pressure_hpa": 1013.0
+}

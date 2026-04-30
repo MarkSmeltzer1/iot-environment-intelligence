@@ -4,7 +4,6 @@ InfluxDB Writer for IoT Environmental Intelligence Pipeline.
 Writes processed sensor data to InfluxDB time-series database.
 Uses InfluxDB v2 API with bucket, org, and measurement structure.
 """
-import logging
 import os
 from datetime import datetime
 from typing import Any, Dict, List
@@ -14,9 +13,9 @@ from influxdb_client import InfluxDBClient, Point
 from influxdb_client.client.write_api import SYNCHRONOUS
 
 from src.utils.config_loader import load_config
+from src.utils.logger import setup_logger
 
-# Configure logging
-logger = logging.getLogger(__name__)
+logger = setup_logger("storage_writer")
 
 
 class InfluxDBWriter:

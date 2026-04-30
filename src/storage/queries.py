@@ -4,7 +4,6 @@ InfluxDB Queries for IoT Environmental Intelligence Pipeline.
 Provides reusable query functions for retrieving environmental data
 from InfluxDB for dashboard visualization and analysis.
 """
-import logging
 import os
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional
@@ -14,8 +13,9 @@ from influxdb_client import InfluxDBClient
 from influxdb_client.rest import ApiException
 
 from src.utils.config_loader import load_config
+from src.utils.logger import setup_logger
 
-logger = logging.getLogger(__name__)
+logger = setup_logger("storage_queries")
 
 
 class InfluxDBQueries:

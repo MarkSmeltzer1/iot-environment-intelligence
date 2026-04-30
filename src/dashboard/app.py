@@ -4,6 +4,10 @@ import streamlit as st
 
 from src.storage.queries import InfluxDBQueries
 from src.utils.config_loader import load_config
+from src.utils.logger import setup_logger
+
+
+logger = setup_logger("dashboard")
 
 
 def load_dashboard_data(hours: int):
@@ -38,6 +42,7 @@ def main():
     try:
         latest, trend, event_counts, anomaly_count, record_count = load_dashboard_data(hours)
     except Exception as exc:
+        logger.exception("Dashboard data load failed")
         st.warning("InfluxDB is not available yet. Start storage before using live dashboard views.")
         st.caption(str(exc))
         latest, trend, event_counts, anomaly_count, record_count = None, [], {}, 0, 0

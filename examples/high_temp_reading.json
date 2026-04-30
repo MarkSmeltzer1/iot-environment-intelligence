@@ -1,0 +1,9 @@
+{
+  "timestamp": "2026-04-28T10:05:00Z",
+  "device_id": "esp32_room_1",
+  "location": "bedroom",
+  "temperature_f": 84.5,
+  "humidity": 48.0,
+  "pressure_hpa": 1012.8,
+  "light_lux": 620
+}

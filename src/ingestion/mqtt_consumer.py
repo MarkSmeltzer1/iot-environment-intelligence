@@ -6,20 +6,15 @@ the pipeline (validation -> transformation -> event detection), and
 optionally writes to InfluxDB.
 """
 import json
-import logging
 from typing import Any, Dict, Optional
 
 import paho.mqtt.client as mqtt
 
 from src.processing.transformer import process_message
 from src.utils.config_loader import load_config
+from src.utils.logger import setup_logger
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
-logger = logging.getLogger(__name__)
+logger = setup_logger("mqtt_consumer")
 
 
 class MQTTConsumer:
