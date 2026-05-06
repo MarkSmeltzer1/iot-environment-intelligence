@@ -13,11 +13,15 @@ env/
 # Environment/config secrets
 .env
 firmware/esp32/secrets.h
+firmware/esp32/main/secrets.h
 
 # Logs
 logs/*
 !logs/.gitkeep
 *.log
+
+# Local planning notes
+docs/demo_plan.md
 
 # OS / editor
 .DS_Store

@@ -11,34 +11,16 @@ pytest
 
 ## Docker Runtime
 
-Start the local MQTT broker and InfluxDB:
+Start all local services:
 
 ```bash
-docker compose up -d mqtt influxdb
+docker compose up -d mqtt influxdb consumer app monitor
 ```
 
 Verify the app can connect to InfluxDB:
 
 ```bash
 docker compose run --rm app python scripts/init_storage.py
-```
-
-Start the MQTT consumer:
-
-```bash
-docker compose up -d consumer
-```
-
-Start the Streamlit dashboard:
-
-```bash
-docker compose up -d app
-```
-
-Start the live MQTT web monitor:
-
-```bash
-docker compose up -d monitor
 ```
 
 Publish test messages through the Docker network:
@@ -49,7 +31,7 @@ docker compose exec -T consumer python scripts/publish_example.py examples/high_
 docker compose exec -T consumer python scripts/publish_example.py examples/invalid_reading.json
 ```
 
-Publish a realistic simulated stream before the ESP32 is connected:
+Publish a realistic simulated stream for local testing:
 
 ```bash
 docker compose exec -T consumer python scripts/run_simulator.py --count 60 --interval-seconds 1 --include-failures
@@ -100,3 +82,16 @@ python scripts/show_record_count.py
 python scripts/run_dashboard.py
 python scripts/run_mqtt_monitor.py
 ```
+
+## Load Testing
+
+With the ESP32 firmware publishing once per second, a 10,000-record data set takes about 2 hours and 47 minutes of continuous runtime.
+
+The simulator can publish the same volume faster when repeatable local load testing is useful:
+
+```bash
+docker compose exec -T consumer python scripts/run_simulator.py --count 10000 --interval-seconds 0 --include-failures
+docker compose exec -T app python scripts/show_record_count.py
+```
+
+Use `scripts/show_record_count.py` to verify stored volume after long-running device or simulator sessions.
