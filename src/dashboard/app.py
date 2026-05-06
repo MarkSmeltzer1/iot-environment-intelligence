@@ -1,6 +1,7 @@
 import pandas as pd
 import plotly.express as px
 import streamlit as st
+from collections import Counter
 
 try:
     from streamlit_autorefresh import st_autorefresh
@@ -24,11 +25,16 @@ def load_dashboard_data(hours: int):
         latest = queries.get_latest_reading()
         sensor_trends = queries.get_sensor_trends(hours=hours)
         event_counts = queries.get_event_counts(hours=hours)
-        anomaly_count = queries.get_anomaly_count(hours=hours)
-        recent_anomalies = queries.get_recent_anomalies(hours=hours)
+        recent_anomalies = queries.get_recent_anomalies(hours=hours, limit=500)
+        anomaly_count = len(recent_anomalies)
         record_count = queries.get_record_count()
     finally:
         queries.close()
+
+    derived_counts = Counter(row["event_label"] for row in recent_anomalies)
+    for label, count in derived_counts.items():
+        if label not in event_counts:
+            event_counts[label] = count
 
     return latest, sensor_trends, event_counts, anomaly_count, recent_anomalies, record_count
 
@@ -67,6 +73,7 @@ def main():
     st.subheader("Live Sensor Trends")
     if sensor_trends:
         trend_df = pd.DataFrame(sensor_trends)
+        trend_df["timestamp"] = pd.to_datetime(trend_df["timestamp"])
         fig = px.line(
             trend_df,
             x="timestamp",
@@ -77,7 +84,7 @@ def main():
         )
         fig.update_yaxes(matches=None)
         fig.update_layout(height=720, showlegend=False)
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width="stretch")
     else:
         st.info("No sensor trend data available yet.")
 
@@ -87,22 +94,23 @@ def main():
             [{"event_label": label, "count": count} for label, count in event_counts.items()]
         )
         fig = px.bar(event_df, x="event_label", y="count")
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width="stretch")
     else:
         st.info("No event data available yet.")
 
     st.subheader("Anomaly Timeline")
     if recent_anomalies:
         anomalies_df = pd.DataFrame(recent_anomalies)
+        anomalies_df["timestamp"] = pd.to_datetime(anomalies_df["timestamp"])
         fig = px.scatter(
             anomalies_df,
             x="timestamp",
             y="device_id",
-            color="location",
-            hover_data=["anomaly_flag"],
+            color="event_label",
+            hover_data=["location", "reason"],
         )
-        st.plotly_chart(fig, use_container_width=True)
-        st.dataframe(anomalies_df, use_container_width=True, hide_index=True)
+        st.plotly_chart(fig, width="stretch")
+        st.dataframe(anomalies_df, width="stretch", hide_index=True)
     else:
         st.info("No anomalies detected in the selected time range.")
 

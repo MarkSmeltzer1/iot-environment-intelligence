@@ -8,6 +8,7 @@ import os
 import warnings
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional
+from zoneinfo import ZoneInfo
 
 import pandas as pd
 from dotenv import load_dotenv
@@ -46,6 +47,10 @@ class InfluxDBQueries:
         self.bucket = os.getenv("INFLUXDB_BUCKET", self.storage_config["bucket"])
         self.org = org
         self.measurement = self.storage_config["measurement"]
+        display_timezone = config.get("processing", {}).get(
+            "display_timezone", "UTC"
+        )
+        self.display_timezone = ZoneInfo(display_timezone)
 
     def _get_time_range(self, hours: int = 24) -> str:
         """Get ISO time range for queries."""
@@ -64,6 +69,151 @@ class InfluxDBQueries:
             return pd.concat(frames, ignore_index=True)
 
         return result
+
+    def _format_display_time(self, value: Any) -> str:
+        """Convert an InfluxDB UTC timestamp to the configured display timezone."""
+        timestamp = pd.Timestamp(value)
+        if timestamp.tzinfo is None:
+            timestamp = timestamp.tz_localize(timezone.utc)
+        return timestamp.tz_convert(self.display_timezone).isoformat()
+
+    @staticmethod
+    def _describe_event(event_label: str) -> str:
+        """Return a readable explanation for an event label."""
+        descriptions = {
+            "high_temp_alert": "Temperature exceeded the configured high-temperature threshold",
+            "high_humidity_alert": "Humidity exceeded the configured high-humidity threshold",
+            "rapid_temp_change": "Temperature changed rapidly compared with the previous reading",
+            "rapid_humidity_change": "Humidity changed rapidly compared with the previous reading",
+            "rapid_light_change": "Light changed rapidly compared with the previous reading",
+            "sunlight_heating": "High light coincided with a temperature rise",
+            "sudden_cooling": "Temperature dropped sharply compared with the previous reading",
+            "normal": "No event rule was triggered",
+            "unknown": "The reading could not be classified",
+        }
+        return descriptions.get(event_label, "Event rule triggered")
+
+    def _get_numeric_reading_rows(
+        self,
+        hours: int,
+        device_id: Optional[str] = None,
+    ) -> List[Dict[str, Any]]:
+        """Return raw numeric sensor readings grouped by timestamp."""
+        start, end = self._get_time_range(hours)
+
+        query = f'''
+        from(bucket: "{self.bucket}")
+          |> range(start: {start})
+          |> filter(fn: (r) => r._measurement == "{self.measurement}")
+          |> filter(fn: (r) => r._field == "temperature_f" or r._field == "humidity" or r._field == "pressure_hpa" or r._field == "light_lux")
+          |> sort(columns: ["_time"])
+        '''
+
+        if device_id:
+            query += f'\n          |> filter(fn: (r) => r.device_id == "{device_id}")'
+
+        result = self._query_data_frame(query)
+        if result.empty:
+            return []
+
+        rows: Dict[tuple, Dict[str, Any]] = {}
+        for _, row in result.iterrows():
+            key = (
+                pd.Timestamp(row["_time"]),
+                row.get("device_id", "unknown"),
+                row.get("location", "unknown"),
+            )
+            reading = rows.setdefault(
+                key,
+                {
+                    "_time": pd.Timestamp(row["_time"]),
+                    "device_id": row.get("device_id", "unknown"),
+                    "location": row.get("location", "unknown"),
+                },
+            )
+            reading[str(row["_field"])] = float(row["_value"])
+
+        return sorted(rows.values(), key=lambda item: item["_time"])
+
+    def _derive_anomalies(
+        self,
+        hours: int,
+        device_id: Optional[str] = None,
+    ) -> List[Dict[str, Any]]:
+        """Derive explanatory anomalies from stored sensor values."""
+        thresholds = self.config["thresholds"]
+        rows = self._get_numeric_reading_rows(hours=hours, device_id=device_id)
+        anomalies: Dict[tuple, Dict[str, Any]] = {}
+        previous: Optional[Dict[str, Any]] = None
+
+        def add_anomaly(row: Dict[str, Any], event_label: str, reason: str) -> None:
+            key = (row["_time"], row["device_id"], row["location"], event_label)
+            anomalies[key] = {
+                "timestamp": self._format_display_time(row["_time"]),
+                "device_id": row["device_id"],
+                "location": row["location"],
+                "event_label": event_label,
+                "reason": reason,
+            }
+
+        for row in rows:
+            temperature = row.get("temperature_f")
+            humidity = row.get("humidity")
+            light = row.get("light_lux")
+
+            if temperature is not None and temperature >= thresholds["high_temp_f"]:
+                add_anomaly(
+                    row,
+                    "high_temp_alert",
+                    f"Temperature reached {temperature:.1f} F, above the {thresholds['high_temp_f']} F threshold",
+                )
+
+            if humidity is not None and humidity >= thresholds["high_humidity"]:
+                add_anomaly(
+                    row,
+                    "high_humidity_alert",
+                    f"Humidity reached {humidity:.1f}%, above the {thresholds['high_humidity']}% threshold",
+                )
+
+            if previous is not None:
+                previous_temp = previous.get("temperature_f")
+                previous_humidity = previous.get("humidity")
+                previous_light = previous.get("light_lux")
+
+                if temperature is not None and previous_temp is not None:
+                    temp_delta = temperature - previous_temp
+                    if abs(temp_delta) >= thresholds["rapid_temp_change_f"]:
+                        add_anomaly(
+                            row,
+                            "rapid_temp_change",
+                            f"Temperature changed by {temp_delta:+.1f} F between readings",
+                        )
+
+                if humidity is not None and previous_humidity is not None:
+                    humidity_delta = humidity - previous_humidity
+                    if abs(humidity_delta) >= thresholds["rapid_humidity_change"]:
+                        add_anomaly(
+                            row,
+                            "rapid_humidity_change",
+                            f"Humidity changed by {humidity_delta:+.1f} percentage points between readings",
+                        )
+
+                if light is not None and previous_light is not None:
+                    light_delta = light - previous_light
+                    if abs(light_delta) >= thresholds["rapid_light_change_lux"]:
+                        add_anomaly(
+                            row,
+                            "rapid_light_change",
+                            f"Light changed by {light_delta:+.0f} lux between readings",
+                        )
+
+            previous = row
+
+        return sorted(
+            anomalies.values(),
+            key=lambda item: pd.Timestamp(item["timestamp"]),
+            reverse=True,
+        )
 
     def get_recent_readings(
         self,
@@ -107,7 +257,7 @@ class InfluxDBQueries:
             readings = []
             for _, row in result.iterrows():
                 readings.append({
-                    "timestamp": row["_time"].isoformat() if hasattr(row["_time"], 'isoformat') else str(row["_time"]),
+                    "timestamp": self._format_display_time(row["_time"]),
                     "device_id": row.get("device_id", "unknown"),
                     "location": row.get("location", "unknown"),
                     "temperature_f": row["_value"],
@@ -152,7 +302,7 @@ class InfluxDBQueries:
 
             row = result.iloc[-1]
             return {
-                "timestamp": str(row["_time"]),
+                "timestamp": self._format_display_time(row["_time"]),
                 "device_id": row.get("device_id", "unknown"),
                 "location": row.get("location", "unknown"),
                 "temperature_f": row["_value"],
@@ -190,8 +340,9 @@ class InfluxDBQueries:
             query += f'\n          |> filter(fn: (r) => r.device_id == "{device_id}")'
 
         query += '''
-          |> group(columns: ["_value"])
-          |> count()
+          |> map(fn: (r) => ({ r with event_label: string(v: r._value), count_value: 1 }))
+          |> group(columns: ["event_label"])
+          |> sum(column: "count_value")
         '''
 
         try:
@@ -202,9 +353,8 @@ class InfluxDBQueries:
 
             event_counts = {}
             for _, row in result.iterrows():
-                event_label = row["_value"]
-                count = row["_value_y"] if "_value_y" in row else row.get(
-                    "_value", 0)
+                event_label = row["event_label"]
+                count = row["count_value"]
                 event_counts[event_label] = int(count)
 
             return event_counts
@@ -230,26 +380,8 @@ class InfluxDBQueries:
         """
         start, end = self._get_time_range(hours)
 
-        query = f'''
-        from(bucket: "{self.bucket}")
-          |> range(start: {start})
-          |> filter(fn: (r) => r._measurement == "{self.measurement}")
-          |> filter(fn: (r) => r._field == "anomaly_flag")
-          |> filter(fn: (r) => r._value == 1)
-        '''
-
-        if device_id:
-            query += f'\n          |> filter(fn: (r) => r.device_id == "{device_id}")'
-
-        query += '\n          |> count()'
-
         try:
-            result = self._query_data_frame(query)
-
-            if result.empty:
-                return 0
-
-            return int(result.iloc[0]["_value"])
+            return len(self._derive_anomalies(hours=hours, device_id=device_id))
 
         except ApiException as e:
             logger.error(f"Query failed: {e}")
@@ -293,7 +425,7 @@ class InfluxDBQueries:
             trend = []
             for _, row in result.iterrows():
                 trend.append({
-                    "timestamp": str(row["_time"]),
+                    "timestamp": self._format_display_time(row["_time"]),
                     "temperature_f": row["_value"],
                 })
 
@@ -364,7 +496,7 @@ class InfluxDBQueries:
             trends = []
             for _, row in result.iterrows():
                 trends.append({
-                    "timestamp": str(row["_time"]),
+                    "timestamp": self._format_display_time(row["_time"]),
                     "sensor": row["_field"],
                     "value": row["_value"],
                     "device_id": row.get("device_id", "unknown"),
@@ -389,40 +521,8 @@ class InfluxDBQueries:
         Returns:
             List of anomaly records with timestamp, device, location, and value.
         """
-        start, end = self._get_time_range(hours)
-
-        query = f'''
-        from(bucket: "{self.bucket}")
-          |> range(start: {start})
-          |> filter(fn: (r) => r._measurement == "{self.measurement}")
-          |> filter(fn: (r) => r._field == "anomaly_flag")
-          |> filter(fn: (r) => r._value == 1)
-        '''
-
-        if device_id:
-            query += f'\n          |> filter(fn: (r) => r.device_id == "{device_id}")'
-
-        query += f'''
-          |> sort(columns: ["_time"], desc: true)
-          |> limit(n: {limit})
-        '''
-
         try:
-            result = self._query_data_frame(query)
-
-            if result.empty:
-                return []
-
-            anomalies = []
-            for _, row in result.iterrows():
-                anomalies.append({
-                    "timestamp": str(row["_time"]),
-                    "device_id": row.get("device_id", "unknown"),
-                    "location": row.get("location", "unknown"),
-                    "anomaly_flag": int(row["_value"]),
-                })
-
-            return anomalies
+            return self._derive_anomalies(hours=hours, device_id=device_id)[:limit]
 
         except ApiException as e:
             logger.error(f"Query failed: {e}")

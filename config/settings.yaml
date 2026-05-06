@@ -28,6 +28,9 @@ thresholds:
   high_light_lux: 700
   sudden_temp_drop_f: 4
   sunlight_temp_rise_f: 2
+  rapid_temp_change_f: 2
+  rapid_humidity_change: 8
+  rapid_light_change_lux: 300
   duplicate_window_seconds: 5
   dropout_seconds: 20
 
@@ -39,6 +42,7 @@ validation:
 
 processing:
   timezone: "UTC"
+  display_timezone: "America/New_York"
   required_fields:
     - timestamp
     - device_id

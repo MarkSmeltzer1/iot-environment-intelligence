@@ -2,7 +2,7 @@
 Local MQTT monitor web page.
 
 Subscribes to the raw MQTT topic and serves a small browser page that shows
-incoming payloads as they arrive. This is useful for demos because MQTT port
+incoming payloads as they arrive. This is useful for local inspection because MQTT port
 1883 is not an HTTP page.
 """
 import json
@@ -21,7 +21,8 @@ from src.utils.logger import setup_logger
 
 
 logger = setup_logger("mqtt_monitor")
-MESSAGES: Deque[Dict[str, Any]] = deque(maxlen=100)
+MESSAGE_BUFFER_LIMIT = int(os.getenv("MONITOR_MESSAGE_LIMIT", "10000"))
+MESSAGES: Deque[Dict[str, Any]] = deque(maxlen=MESSAGE_BUFFER_LIMIT)
 MESSAGES_LOCK = threading.Lock()
 
 
@@ -51,7 +52,12 @@ def add_message(topic: str, payload: str) -> Dict[str, Any]:
         MESSAGES.appendleft(record)
         count = len(MESSAGES)
 
-    logger.info("Monitor captured MQTT message on %s", topic)
+    logger.info(
+        "Monitor captured MQTT message on %s (%s/%s buffered)",
+        topic,
+        count,
+        MESSAGE_BUFFER_LIMIT,
+    )
     record["buffered_count"] = count
     return record
 
@@ -98,7 +104,11 @@ class MonitorRequestHandler(BaseHTTPRequestHandler):
         elif parsed_path.path == "/api/messages":
             self._send_json({"messages": get_messages()})
         elif parsed_path.path == "/api/status":
-            self._send_json({"status": "running", "message_count": len(get_messages())})
+            self._send_json({
+                "status": "running",
+                "message_count": len(get_messages()),
+                "buffer_limit": MESSAGE_BUFFER_LIMIT,
+            })
         else:
             self.send_error(404, "Not found")
 

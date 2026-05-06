@@ -1,8 +1,5 @@
 """
-Realistic pre-device MQTT data simulator.
-
-This is for testing the pipeline before the ESP32 is connected. The final
-capstone still uses the physical ESP32 as the required device layer.
+Realistic MQTT data simulator for local development and load testing.
 """
 import json
 import math
@@ -69,7 +66,7 @@ def build_reading(
     if not include_failures:
         return reading
 
-    # Repeatable demo scenarios that exercise processing and validation.
+    # Repeatable scenarios that exercise processing and validation.
     if index > 0 and index % 75 == 0:
         logger.warning("Simulating sensor dropout at index %s", index)
         return None

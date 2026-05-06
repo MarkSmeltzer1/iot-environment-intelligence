@@ -71,10 +71,12 @@ class InfluxDBWriter:
             dt = datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
             point.time(dt)
 
-        # Add fields (numeric values)
-        point.field("temperature_f", raw.get("temperature_f", 0))
-        point.field("humidity", raw.get("humidity", 0))
-        point.field("pressure_hpa", raw.get("pressure_hpa", 0))
+        # Add fields with stable InfluxDB types. Some device payloads encode
+        # whole-number readings as JSON integers, but these fields are floats
+        # in the time-series schema.
+        point.field("temperature_f", float(raw.get("temperature_f", 0)))
+        point.field("humidity", float(raw.get("humidity", 0)))
+        point.field("pressure_hpa", float(raw.get("pressure_hpa", 0)))
         point.field("light_lux", int(round(raw.get("light_lux", 0))))
 
         # Add event data as fields
@@ -82,6 +84,7 @@ class InfluxDBWriter:
             "event_label", "unknown"))
         point.field("anomaly_flag", 1 if processed_result.get(
             "anomaly_flag", False) else 0)
+        point.field("event_reason", "; ".join(processed_result.get("reasons", [])))
 
         # Add tags (for efficient querying)
         device_id = raw.get("device_id", "unknown")
