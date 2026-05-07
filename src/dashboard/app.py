@@ -73,7 +73,9 @@ def main():
     st.subheader("Live Sensor Trends")
     if sensor_trends:
         trend_df = pd.DataFrame(sensor_trends)
-        trend_df["timestamp"] = pd.to_datetime(trend_df["timestamp"])
+        trend_df["timestamp"] = pd.to_datetime(
+            trend_df["timestamp"], format="ISO8601"
+        )
         fig = px.line(
             trend_df,
             x="timestamp",
@@ -101,7 +103,9 @@ def main():
     st.subheader("Anomaly Timeline")
     if recent_anomalies:
         anomalies_df = pd.DataFrame(recent_anomalies)
-        anomalies_df["timestamp"] = pd.to_datetime(anomalies_df["timestamp"])
+        anomalies_df["timestamp"] = pd.to_datetime(
+            anomalies_df["timestamp"], format="ISO8601"
+        )
         fig = px.scatter(
             anomalies_df,
             x="timestamp",
