@@ -48,7 +48,7 @@ def main():
 
     st.title("IoT Environmental Intelligence")
 
-    hours = st.sidebar.slider("Hours", min_value=1, max_value=72, value=24)
+    hours = st.sidebar.slider("Hours", min_value=1, max_value=720, value=168)
     live_refresh = st.sidebar.toggle("Live refresh", value=True)
     refresh_seconds = st.sidebar.slider("Refresh seconds", min_value=5, max_value=60, value=10)
     refresh = st.sidebar.button("Refresh")
